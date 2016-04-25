@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/codegangsta/negroni"
@@ -25,22 +26,25 @@ func flip(w http.ResponseWriter, r *http.Request) {
 	if text, ok := r.URL.Query()["text"]; ok && text[0] != "" {
 		thing = text[0]
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	answer, _ := json.Marshal(slackReturn{"in_channel", flipTable[rand.Intn(len(flipTable))] + thing})
-	fmt.Fprintf(w, string(answer))
-}
 
-func flop(w http.ResponseWriter, r *http.Request) {
-
-	thing := "┻━┻"
-	if text, ok := r.URL.Query()["text"]; ok && text[0] != "" {
-		thing = text[0]
+	var flipText string
+	switch r.URL.EscapedPath() {
+	case "/flip":
+		flipText = flipTable[rand.Intn(len(flipTable))] + thing
+	case "/flop":
+		flipText = thing + flopTable[rand.Intn(len(flopTable))]
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	answer, _ := json.Marshal(slackReturn{"in_channel", thing + flopTable[rand.Intn(len(flopTable))]})
-	fmt.Fprintf(w, string(answer))
+
+	if strings.Contains(r.Header.Get("Accept"), "application/json") == true {
+		w.Header().Set("Content-Type", "application/json")
+		response, _ := json.Marshal(slackReturn{"in_channel", flipText})
+		fmt.Fprintf(w, string(response))
+	} else {
+		fmt.Fprintf(w, flipText)
+	}
 }
 
 func main() {
@@ -74,7 +78,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/flip", flip).Methods("GET")
-	router.HandleFunc("/flop", flop).Methods("GET")
+	router.HandleFunc("/flop", flip).Methods("GET")
 
 	n.UseHandler(router)
 	n.Run(":4242")
