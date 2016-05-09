@@ -1,11 +1,15 @@
-FROM golang:1.6-alpine
+FROM alpine:3.3
 MAINTAINER 0rax <jp@roemer.im>
 
-RUN apk --no-cache --no-progress add git
+COPY . /app
+WORKDIR /app
 
-COPY . /go/src/github.com/0rax/slack-flip-bot
-WORKDIR /go/src/github.com/0rax/slack-flip-bot
-RUN go get && go build -o flip-bot
+ENV GOPATH /go
+RUN apk --no-cache --no-progress add --virtual build-deps go git \
+ && mkdir -p /go/src/github.com/0rax/ \
+ && ln -s /app /go/src/github.com/0rax/slack-flip-bot \
+ && go get github.com/0rax/slack-flip-bot && go build -o /app/flip-bot \
+ && rm -rf /go/* && apk --no-cache --no-progress del build-deps
 
 EXPOSE 4242
-CMD ["/go/src/github.com/0rax/slack-flip-bot/flip-bot"]
+CMD ["/app/flip-bot"]
