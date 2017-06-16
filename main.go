@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/codegangsta/negroni"
-	"github.com/gorilla/mux"
 )
 
 type slackReturn struct {
@@ -24,6 +21,11 @@ var (
 )
 
 func flip(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
 	thing := "┻━┻"
 	if text, ok := r.URL.Query()["text"]; ok && text[0] != "" {
@@ -86,13 +88,10 @@ func main() {
 		"ミ⎝(´･ω･`)⎠彡",
 		"ミ┗((✧Д✧))┛彡",
 	}
-	n := negroni.Classic()
-	router := mux.NewRouter()
 
-	router.HandleFunc("/flip", flip).Methods("GET")
-	router.HandleFunc("/flop", flip).Methods("GET")
-	router.HandleFunc("/flipflop", flip).Methods("GET")
+	http.HandleFunc("/flip", flip)
+	http.HandleFunc("/flop", flip)
+	http.HandleFunc("/flipflop", flip)
 
-	n.UseHandler(router)
-	n.Run(":4242")
+	http.ListenAndServe(":4242", nil)
 }

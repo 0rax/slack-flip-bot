@@ -1,15 +1,14 @@
-FROM alpine:3.3
-MAINTAINER 0rax <jp@roemer.im>
+FROM golang:1.8-alpine AS builder
 
-COPY . /app
+COPY . /go/src/github.com/0rax/slack-flip-bot
+
+RUN cd /go/src/github.com/0rax/slack-flip-bot \
+ && CGO_ENABLED=0 GOOS=linux go build -o bin/flip-bot -ldflags '-extldflags "-static"'
+
+FROM scratch AS runtime
+
 WORKDIR /app
-
-ENV GOPATH /go
-RUN apk --no-cache --no-progress add --virtual build-deps go git \
- && mkdir -p /go/src/github.com/0rax/ \
- && ln -s /app /go/src/github.com/0rax/slack-flip-bot \
- && go get github.com/0rax/slack-flip-bot && go build -o /app/flip-bot \
- && rm -rf /go/* && apk --no-cache --no-progress del build-deps
+COPY --from=builder /go/src/github.com/0rax/slack-flip-bot/bin/* /app/bin/
 
 EXPOSE 4242
-CMD ["/app/flip-bot"]
+CMD ["bin/flip-bot"]
